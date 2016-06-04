@@ -72,6 +72,7 @@
       Illuminate\Support\Facades\URL,
       Illuminate\Support\Facades\Validator,
       Illuminate\Support\Facades\View;
+  use League\Flysystem\Exception;
 
   // Модели и прочие классы
 
@@ -111,7 +112,72 @@ class Controller extends BaseController {
     //-----------------------//
     // Обработать GET-запрос //
     //-----------------------//
-    return Input::get('provider');
+
+      // 1. Получить значение входящего параметра "provider" из query string
+
+        // Получить
+        $provider = Input::get('provider');
+        if(empty($provider) && !is_string($provider)) return "Error: wrong provider";
+
+        // Привести к нижнему регистру
+        $provider = mb_strtolower($provider);
+
+      // 2. Получить массив-конфиг для HybridAuth и обработать его
+
+        // 2.1. Получить
+        $hybridauth_config = config("M5.hybridauth_config");
+        if(empty($hybridauth_config) || !is_array($hybridauth_config)) return "Error: config is absent";
+
+        // 2.2. Добавить к base_url в конфиге в виде приставки протокол, хост и порт
+        $hybridauth_config['base_url'] = (\Request::secure() ? "https://" : "http://") . (\Request::getHost()) . ":" . (\Request::getPort()) . $hybridauth_config['base_url'];
+
+      // 3. В зависимости от $provider обработать запрос
+      try {
+
+        // 3.1. Если провайдером указан Steam
+        if($provider == "steam") {
+
+          // 1] Проверить, если класс Hybrid_Auth недоступен, вернуть ошибку
+          if(!class_exists("Hybrid_Auth")) throw new Exception("Hybrid_Auth class is not available");
+
+          // 2] Получить API-ключ от Steam из конфига M5
+          $apikey = config("M5.steam_api_key");
+          if(!$apikey || !is_string($apikey)) throw new Exception("Steam api key is absent.");
+
+          // 3] Создать объект класса Hybrid_Auth
+          $hybridauth = new \Hybrid_Auth( $hybridauth_config );
+
+          // 4] Попробовать аутентифицироваться через выбранного провайдера
+          // - При заходе на контроллер через сайт это переадресует на сайт провайдера.
+          // - При возврате запроса с сайта провайдера через HA Endpoint, это даст экземпляр провайдера.
+          $adapter = $hybridauth->authenticate($provider);
+
+          //$adapter->loginFinish();
+
+          // 5] С помощью API Steam и $apikey получить информацию о пользователе
+          //$adapter->getUserProfileWebAPI($apikey);
+
+
+          $hybridauth->getSessionData()
+
+
+
+          return $hybridauth->getSessionData();
+
+        }
+
+      } catch(\Exception $e) {
+        write2log("Error: ".$e->getMessage(), []);
+        return "Error: ".$e->getMessage();
+      }
+
+      // n. Вернуть сообщение о том, что не верно указан провайдер
+      return "Error: wrong provider";
+
+
+
+
+    //return Input::get('provider');
 
 
 
