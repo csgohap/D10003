@@ -131,58 +131,32 @@ class Controller extends BaseController {
         // 2.2. Добавить к base_url в конфиге в виде приставки протокол, хост и порт
         $hybridauth_config['base_url'] = (\Request::secure() ? "https://" : "http://") . (\Request::getHost()) . ":" . (\Request::getPort()) . $hybridauth_config['base_url'];
 
-      // 3. В зависимости от $provider обработать запрос
-      try {
-
-        // 3.1. Если провайдером указан Steam
-        if($provider == "steam") {
-
-          // 1] Проверить, если класс Hybrid_Auth недоступен, вернуть ошибку
-          if(!class_exists("Hybrid_Auth")) throw new Exception("Hybrid_Auth class is not available");
-
-          // 2] Получить API-ключ от Steam из конфига M5
-          $apikey = config("M5.steam_api_key");
-          if(!$apikey || !is_string($apikey)) throw new Exception("Steam api key is absent.");
-
-          // 3] Создать объект класса Hybrid_Auth
-          $hybridauth = new \Hybrid_Auth( $hybridauth_config );
-
-          // 4] Попробовать аутентифицироваться через выбранного провайдера
-          // - При заходе на контроллер через сайт это переадресует на сайт провайдера.
-          // - При возврате запроса с сайта провайдера через HA Endpoint, это даст экземпляр провайдера.
-          $adapter = $hybridauth->authenticate($provider);
-
-          //$adapter->loginFinish();
-
-          // 5] С помощью API Steam и $apikey получить информацию о пользователе
-          //$adapter->getUserProfileWebAPI($apikey);
-
-
-          $hybridauth->getSessionData()
-
-
-
-          return $hybridauth->getSessionData();
-
-        }
-
-      } catch(\Exception $e) {
-        write2log("Error: ".$e->getMessage(), []);
-        return "Error: ".$e->getMessage();
+      // 3. В зависимости от $provider выполнить соответствующую команду
+      // - Каждой команде передавать ID текущей сессии (выступит каналом для коммуникации через websockets)
+      // - Каждой команде также передавать $provider и $hybridauth_config.
+      // - Если провайдер указан неправильно, сообщить об этом.
+      switch($provider) {
+        case "steam": $result = runcommand('\M5\Commands\C69_auth_steam', ["websockets_channel" => Session::getId(), "provider" => $provider, "hybridauth_config" => $hybridauth_config]); break;
+        default: return "Error: wrong provider";
       }
 
-      // n. Вернуть сообщение о том, что не верно указан провайдер
-      return "Error: wrong provider";
+      // 4. Если команда вернула ошибку, сообщить об этом
+      if($result['status'] != 0) {
+        Log::info('Error: '.$result['data']['errormsg']);
+        write2log('Error: '.$result['data']['errormsg']);
+        return "Error: ".$result['data']['errortext'];
+      }
 
+      // n. Вернуть клиенту представление
+      return View::make($this->packid.'::view', ['data' => json_encode([
 
+        'document_locale'       => r1_get_doc_locale($this->packid),
+        'auth'                  => session('auth_cache') ?: '',
+        'packid'                => $this->packid,
+        'layoutid'              => $this->layoutid,
+        'websockets_channel'    => Session::getId()
 
-
-    //return Input::get('provider');
-
-
-
-    //return redirect()->away('https://www.google.com');
-
+      ]), 'layoutid' => $this->layoutid.'::layout']);
 
 
   } // конец getIndex()
