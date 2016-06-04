@@ -153,8 +153,7 @@ class Controller extends BaseController {
         'document_locale'       => r1_get_doc_locale($this->packid),
         'auth'                  => session('auth_cache') ?: '',
         'packid'                => $this->packid,
-        'layoutid'              => $this->layoutid,
-        'websockets_channel'    => Session::getId()
+        'layoutid'              => $this->layoutid
 
       ]), 'layoutid' => $this->layoutid.'::layout']);
 
