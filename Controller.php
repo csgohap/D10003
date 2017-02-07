@@ -147,17 +147,65 @@ class Controller extends BaseController {
         return "Error: ".$result['data']['errortext'];
       }
 
-      // n. Вернуть клиенту представление
-      return redirect()->away('https://www.dropbox.com');
+      // 5. Получить режим аутентификации
+      // - window     | [По умолчанию] Аутентификация в окне, которое потом исчезает
+      // - redirect   | Редирект на аутентификацию, потом редирект обратно по полученному URL
+      $authmode = call_user_func(function(){
 
-//      View::make($this->packid.'::view', ['data' => json_encode([
-//
-//        'document_locale'       => r1_get_doc_locale($this->packid),
-//        'auth'                  => session('auth_cache') ?: '',
-//        'packid'                => $this->packid,
-//        'layoutid'              => $this->layoutid
-//
-//      ]), 'layoutid' => $this->layoutid.'::layout']);
+        // 1] Получить значение входящего параметра "authmode" из query string
+        $authmode = Input::get('authmode');
+
+        // 2] Если $authmode не найден, или не равен window/redirect задать значение по умолчанию
+        if(empty($authmode) || !in_array($authmode, ['window', 'redirect']))
+          $authmode = "window";
+
+        // 3] Если $authmode равен 'redirect', получить ещё URL для редиректа
+        $url = "";
+        if($authmode == 'redirect') {
+
+          // 3.1] Получить значение входящего параметра url_redirect
+          $url_redirect = Input::get('url_redirect');
+
+          // 3.2] Если $url_redirect пуст
+          if(empty($url_redirect))
+            $authmode = "window";
+
+          // 3.3] Иначе
+          else
+            $url = $url_redirect;
+
+        }
+
+        // n] Вернуть результат
+        return [
+          'mode' => $authmode,
+          'url'      => $url
+        ];
+
+      });
+
+      // n. Завершить аутентификацию
+
+        // n.1. Если authmode == 'window'
+        if($authmode['mode'] == 'window') {
+
+          View::make($this->packid.'::view', ['data' => json_encode([
+
+            'document_locale'       => r1_get_doc_locale($this->packid),
+            'auth'                  => session('auth_cache') ?: '',
+            'packid'                => $this->packid,
+            'layoutid'              => $this->layoutid
+
+          ]), 'layoutid' => $this->layoutid.'::layout']);
+
+        }
+
+        // n.2. Если authmode == 'redirect'
+        else if($authmode['mode'] == 'redirect') {
+
+          return redirect()->away($authmode['url']);
+
+        }
 
 
   } // конец getIndex()
