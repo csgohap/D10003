@@ -148,14 +148,16 @@ class Controller extends BaseController {
       }
 
       // n. Вернуть клиенту представление
-      return View::make($this->packid.'::view', ['data' => json_encode([
+      return redirect()->away('https://www.dropbox.com');
 
-        'document_locale'       => r1_get_doc_locale($this->packid),
-        'auth'                  => session('auth_cache') ?: '',
-        'packid'                => $this->packid,
-        'layoutid'              => $this->layoutid
-
-      ]), 'layoutid' => $this->layoutid.'::layout']);
+//      View::make($this->packid.'::view', ['data' => json_encode([
+//
+//        'document_locale'       => r1_get_doc_locale($this->packid),
+//        'auth'                  => session('auth_cache') ?: '',
+//        'packid'                => $this->packid,
+//        'layoutid'              => $this->layoutid
+//
+//      ]), 'layoutid' => $this->layoutid.'::layout']);
 
 
   } // конец getIndex()
