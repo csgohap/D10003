@@ -129,7 +129,7 @@ class Controller extends BaseController {
         if(empty($hybridauth_config) || !is_array($hybridauth_config)) return "Error: config is absent";
 
         // 2.2. Добавить к base_url в конфиге в виде приставки протокол, хост и порт
-        $hybridauth_config['base_url'] = (\Request::secure() ? "https://" : "http://") . (\Request::getHost()) . ":" . (\Request::getPort()) . $hybridauth_config['base_url'];
+        $hybridauth_config['base_url'] =  (\Request::secure() ? "https://" : "http://") . (\Request::getHost()) . ":" . (\Request::getPort()) . $hybridauth_config['base_url']; // "http://matrixcsgo.com/authwith/hybrid-auth-endpoint";
 
       // 3. В зависимости от $provider выполнить соответствующую команду
       // - Каждой команде передавать ID текущей сессии (выступит каналом для коммуникации через websockets)
@@ -179,7 +179,7 @@ class Controller extends BaseController {
         // n] Вернуть результат
         return [
           'mode' => $authmode,
-          'url'      => $url
+          'url'  => $url
         ];
 
       });
