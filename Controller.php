@@ -128,8 +128,35 @@ class Controller extends BaseController {
         $hybridauth_config = config("M5.hybridauth_config");
         if(empty($hybridauth_config) || !is_array($hybridauth_config)) return "Error: config is absent";
 
+        // 2.2. Определить, через какой хост проводить аутентификацию
+        // - Это зависит от среды, в которой запущено приложение.
+        // - Данные берутся из конфига M5.
+        $host2auth = call_user_func(function(){
+
+          // 1] Получить параметры
+          $params = config("M5.hybridauth_env_params");
+
+          // 2] Получить название текущей среды
+          $env = env('APP_ENV', 'dev');
+
+          // 3] Получить параметр для этой среды
+          $env_params = array_key_exists($env, $params) ? $params[$env] : false;
+          if($env_params == false)
+            throw new \Exception("Не удалось получить параметры аутентификации для среды ".$env);
+
+          // 4] Получить хост
+          $host = $env_params['host'];
+
+          // 5] Если хост равен auto, присвоить ему \Request::getHost()
+          if($host == 'auto') $host = \Request::getHost();
+
+          // n] Вернуть хост
+          return $host;
+
+        });
+
         // 2.2. Добавить к base_url в конфиге в виде приставки протокол, хост и порт
-        $hybridauth_config['base_url'] =  (\Request::secure() ? "https://" : "http://") . (\Request::getHost()) . ":" . (\Request::getPort()) . $hybridauth_config['base_url']; // "http://matrixcsgo.com/authwith/hybrid-auth-endpoint";
+        $hybridauth_config['base_url'] =  (\Request::secure() ? "https://" : "http://") . ($host2auth) . ":" . (\Request::getPort()) . $hybridauth_config['base_url']; // "http://matrixcsgo.com/authwith/hybrid-auth-endpoint";
 
       // 3. В зависимости от $provider выполнить соответствующую команду
       // - Каждой команде передавать ID текущей сессии (выступит каналом для коммуникации через websockets)
